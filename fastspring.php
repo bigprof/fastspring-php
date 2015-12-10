@@ -17,6 +17,9 @@ class FastSpring {
 		$this->api_password = $api_password;
 	}
 	
+	/**
+	 * create new order url and redirect user to it 
+	 */
 	public function createSubscription($product_ref, $customer_ref) {
 		$url = "http://sites.fastspring.com/".$this->store_id."/product/".$product_ref."?referrer=".$customer_ref;
 		$url = $this->addTestMode($url);
@@ -24,17 +27,15 @@ class FastSpring {
 		header("Location: $url");
 	}
 	
+	/**
+	 * retrieve subscription data from fastspring API
+	 */ 
 	public function getSubscription($subscription_ref) {
 		$url = $this->getSubscriptionUrl($subscription_ref);
-		
 		$ch = curl_init($url);
 		
 		curl_setopt($ch, CURLOPT_USERPWD, $this->api_username . ":" . $this->api_password);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
-		
-		// turn ssl certificate verification off, i get http response 0 otherwise
-		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 		
 		$response = curl_exec($ch);
 		$info = curl_getinfo($ch);
@@ -65,6 +66,9 @@ class FastSpring {
   		return $sub;
 	}
 	
+	/**
+	 * update an existing subscription to fastspring API
+	 */
 	public function updateSubscription($subscriptionUpdate) {
 		$url = $this->getSubscriptionUrl($subscriptionUpdate->reference);
 		
@@ -76,10 +80,6 @@ class FastSpring {
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $subscriptionUpdate->toXML());
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
-		
-		// turn ssl certificate verification off, i get http response 0 otherwise
-		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 		
 		$response = curl_exec($ch);
 		$info = curl_getinfo($ch);
@@ -112,6 +112,9 @@ class FastSpring {
 	  	return $sub;
 	}
 	
+	/**
+	 * send cancel request for a subscription to fastspring API
+	 */
 	public function cancelSubscription($subscription_ref) {
 		$url = $this->getSubscriptionUrl($subscription_ref);
 		
@@ -122,10 +125,6 @@ class FastSpring {
 		curl_setopt($ch, CURLOPT_POSTFIELDS, "");
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
-		
-		// turn ssl certificate verification off, i get http response 0 otherwise
-		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 		
 		$response = curl_exec($ch);
 		$info = curl_getinfo($ch);
@@ -139,6 +138,7 @@ class FastSpring {
 			  	
 			  	$sub = $this->parseFsprgSubscription($doc);
 			  	
+			  	$subResp = new FsprgCancelSubscriptionResponse();
 			  	$subResp->subscription = $sub;
 			  } catch(Exception $e) {
 				$fsprgEx = new FsprgException("An error occurred calling the FastSpring subscription service", 0, $e);
@@ -160,6 +160,9 @@ class FastSpring {
 	  	return $subResp;
 	}
 	
+	/**
+	 * send renew request for an on-demand subscription to fastspring API
+	 */
 	public function renewSubscription($subscription_ref) {
 		$url = $this->getSubscriptionUrl($subscription_ref."/renew");
 		
@@ -169,10 +172,6 @@ class FastSpring {
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, "");
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		
-		// turn ssl certificate verification off, i get http response 0 otherwise
-		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 		
 		$response = curl_exec($ch);
 		$info = curl_getinfo($ch);
@@ -190,6 +189,9 @@ class FastSpring {
 		}
 	}
 	
+	/**
+	 * compose customer's subscription management url for a given subscription reference
+	 */
 	private function getSubscriptionUrl($subscription_ref) {
 		$url = "https://api.fastspring.com/company/".$this->store_id."/subscription/".$subscription_ref;
 
@@ -198,6 +200,9 @@ class FastSpring {
 		return $url;
 	}
 	
+	/**
+	 * add test parameter to url if test mode enabled
+	 */
 	private function addTestMode($url) {
 		if ($this->test_mode) {
 			if (strpos($url, '?') != false) {
@@ -210,6 +215,9 @@ class FastSpring {
 		return $url;
 	}
 	
+	/**
+	 * parse subscription xml into subscription and customer data
+	 */
 	private function parseFsprgSubscription($doc) {
 		$sub = new FsprgSubscription();
 		
@@ -308,6 +316,10 @@ class FsprgSubscriptionUpdate {
 		
 		return $xmlResult->asXML();
 	}
+}
+
+class FsprgCancelSubscriptionResponse {
+	public $subscription;
 }
 
 class FsprgException extends Exception {
